@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Coin Dodge</title>
+<title>🪙 Coin Dodge</title>
 
 <style>
 
@@ -58,9 +58,11 @@ h1 {
     top: 210px;
 
     border-radius: 5px;
+
+    z-index: 5;
 }
 
-#coin {
+.coin {
     width: 22px;
     height: 22px;
 
@@ -69,6 +71,8 @@ h1 {
     border-radius: 50%;
 
     position: absolute;
+
+    box-shadow: 0 0 8px gold;
 }
 
 .enemy {
@@ -80,6 +84,8 @@ h1 {
     position: absolute;
 
     border-radius: 5px;
+
+    z-index: 3;
 }
 
 button {
@@ -101,11 +107,6 @@ button {
     color: black;
 }
 
-#home {
-    background: #444;
-    color: white;
-}
-
 #gameOver {
     display: none;
 
@@ -123,6 +124,8 @@ button {
     border-radius: 15px;
 
     z-index: 20;
+
+    width: 250px;
 }
 
 </style>
@@ -142,15 +145,11 @@ Punkte: 0 | Leben: ❤️❤️❤️
 ▶️ Start
 </button>
 
-<button id="home" onclick="location.href='../'">
-🏠 Startseite
-</button>
-
 <div id="game">
 
     <div id="player"></div>
 
-    <div id="coin"></div>
+    <!-- 10 Coins werden hier erzeugt -->
 
     <div id="gameOver">
 
@@ -170,7 +169,7 @@ Punkte: 0 | Leben: ❤️❤️❤️
 <script>
 
 /* =========================
-   SPIEL-VARIABLEN
+   ELEMENTE
 ========================= */
 
 const game =
@@ -178,9 +177,6 @@ const game =
 
 const player =
     document.getElementById("player");
-
-const coin =
-    document.getElementById("coin");
 
 const info =
     document.getElementById("info");
@@ -195,8 +191,11 @@ const finalScore =
     document.getElementById("finalScore");
 
 
-let playerX = 335;
+/* =========================
+   VARIABLEN
+========================= */
 
+let playerX = 335;
 let playerY = 210;
 
 let score = 0;
@@ -205,19 +204,13 @@ let lives = 3;
 
 let gameRunning = false;
 
-
-/*
-   DAS IST DER COOLDOWN
-   false = verwundbar
-   true = unverwundbar
-*/
-
 let invincible = false;
-
 
 let keys = {};
 
 let enemies = [];
+
+let coins = [];
 
 let cooldownTimer = null;
 
@@ -236,7 +229,6 @@ document.addEventListener(
 
     }
 );
-
 
 document.addEventListener(
     "keyup",
@@ -270,25 +262,108 @@ function randomPosition(size) {
 
 
 /* =========================
-   COIN
+   10 COINS ERSTELLEN
 ========================= */
 
-function moveCoin() {
+function createCoins() {
 
-    let position =
-        randomPosition(22);
+    /*
+       Alte Coins löschen
+    */
 
-    coin.style.left =
-        position.x + "px";
+    coins.forEach(function(coin) {
 
-    coin.style.top =
-        position.y + "px";
+        coin.element.remove();
+
+    });
+
+
+    coins = [];
+
+
+    /*
+       10 neue Coins
+    */
+
+    for (
+        let i = 0;
+        i < 10;
+        i++
+    ) {
+
+        let coin =
+            document.createElement("div");
+
+        coin.className =
+            "coin";
+
+
+        let position =
+            randomPosition(22);
+
+
+        coin.style.left =
+            position.x + "px";
+
+        coin.style.top =
+            position.y + "px";
+
+
+        game.appendChild(coin);
+
+
+        coins.push({
+
+            element: coin,
+
+            x: position.x,
+
+            y: position.y,
+
+            collected: false
+
+        });
+
+    }
 
 }
 
 
 /* =========================
-   GEGNER
+   NEUE COIN POSITION
+========================= */
+
+function respawnCoin(coin) {
+
+    let position =
+        randomPosition(22);
+
+
+    coin.x =
+        position.x;
+
+    coin.y =
+        position.y;
+
+
+    coin.collected =
+        false;
+
+
+    coin.element.style.left =
+        coin.x + "px";
+
+    coin.element.style.top =
+        coin.y + "px";
+
+    coin.element.style.display =
+        "block";
+
+}
+
+
+/* =========================
+   GEGNER ERSTELLEN
 ========================= */
 
 function createEnemies() {
@@ -302,6 +377,10 @@ function createEnemies() {
 
     enemies = [];
 
+
+    /*
+       3 Gegner
+    */
 
     for (
         let i = 0;
@@ -318,6 +397,16 @@ function createEnemies() {
 
         let position =
             randomPosition(30);
+
+
+        enemy.style.left =
+            position.x + "px";
+
+        enemy.style.top =
+            position.y + "px";
+
+
+        game.appendChild(enemy);
 
 
         enemies.push({
@@ -340,16 +429,6 @@ function createEnemies() {
 
         });
 
-
-        enemy.style.left =
-            position.x + "px";
-
-        enemy.style.top =
-            position.y + "px";
-
-
-        game.appendChild(enemy);
-
     }
 
 }
@@ -360,10 +439,6 @@ function createEnemies() {
 ========================= */
 
 function startGame() {
-
-    /*
-       Alte Timer löschen
-    */
 
     clearTimeout(cooldownTimer);
 
@@ -401,7 +476,17 @@ function startGame() {
 
     updateInfo();
 
-    moveCoin();
+
+    /*
+       10 Coins
+    */
+
+    createCoins();
+
+
+    /*
+       Gegner
+    */
 
     createEnemies();
 
@@ -469,7 +554,9 @@ function movePlayer() {
     }
 
 
-    /* Grenzen */
+    /*
+       Spielfeldgrenzen
+    */
 
     playerX =
         Math.max(
@@ -582,47 +669,57 @@ function collision(
 
 
 /* =========================
-   COIN PRÜFEN
+   COINS PRÜFEN
 ========================= */
 
-function checkCoin() {
+function checkCoins() {
 
-    let coinX =
-        parseFloat(
-            coin.style.left
-        );
+    coins.forEach(function(coin) {
 
-    let coinY =
-        parseFloat(
-            coin.style.top
-        );
+        if (coin.collected) {
+            return;
+        }
 
 
-    if (
+        if (
 
-        collision(
+            collision(
 
-            playerX,
-            playerY,
-            30,
-            30,
+                playerX,
+                playerY,
+                30,
+                30,
 
-            coinX,
-            coinY,
-            22,
-            22
+                coin.x,
+                coin.y,
+                22,
+                22
 
-        )
+            )
 
-    ) {
+        ) {
 
-        score += 10;
+            /*
+               Coin einsammeln
+            */
 
-        moveCoin();
+            score += 10;
 
-        updateInfo();
 
-    }
+            /*
+               Coin sofort
+               an anderer Stelle
+               erscheinen lassen
+            */
+
+            respawnCoin(coin);
+
+
+            updateInfo();
+
+        }
+
+    });
 
 }
 
@@ -634,10 +731,8 @@ function checkCoin() {
 function checkEnemies() {
 
     /*
-       SEHR WICHTIG:
-
-       Wenn invincible true ist,
-       wird die Funktion SOFORT beendet.
+       Während Cooldown:
+       KEIN Schaden möglich
     */
 
     if (invincible) {
@@ -651,7 +746,8 @@ function checkEnemies() {
         let enemy of enemies
     ) {
 
-        let hit =
+        if (
+
             collision(
 
                 playerX,
@@ -664,10 +760,9 @@ function checkEnemies() {
                 30,
                 30
 
-            );
+            )
 
-
-        if (hit) {
+        ) {
 
             loseLife();
 
@@ -686,14 +781,8 @@ function checkEnemies() {
 
 function loseLife() {
 
-    /*
-       Doppelte Treffer verhindern
-    */
-
     if (invincible) {
-
         return;
-
     }
 
 
@@ -704,7 +793,7 @@ function loseLife() {
 
 
     /*
-       Keine Leben mehr
+       Game Over
     */
 
     if (lives <= 0) {
@@ -723,16 +812,12 @@ function loseLife() {
     invincible = true;
 
 
-    let cooldown =
-        1500;
-
-
     shield.textContent =
         "🛡️ UNVERWUNDBAR";
 
 
     /*
-       Spieler blinken lassen
+       Spieler blinken
     */
 
     blinkTimer =
@@ -756,15 +841,14 @@ function loseLife() {
 
 
     /*
-       Spieler an sichere Stelle setzen
+       Spieler weg vom Gegner
     */
 
     movePlayerToSafePosition();
 
 
     /*
-       Nach 1,5 Sekunden
-       wieder verwundbar
+       1,5 Sekunden Cooldown
     */
 
     cooldownTimer =
@@ -785,7 +869,7 @@ function loseLife() {
             shield.textContent =
                 "";
 
-        }, cooldown);
+        }, 1500);
 
 }
 
@@ -806,14 +890,8 @@ function movePlayerToSafePosition() {
         position =
             randomPosition(30);
 
-
         safe = true;
 
-
-        /*
-           Prüfen, ob dort
-           ein Gegner ist
-        */
 
         for (
             let enemy of enemies
@@ -902,7 +980,6 @@ function endGame() {
     player.style.opacity =
         "1";
 
-
     player.style.display =
         "none";
 
@@ -924,7 +1001,7 @@ function endGame() {
 
 
 /* =========================
-   SPIELSCHLEIFE
+   HAUPTSCHLEIFE
 ========================= */
 
 function gameLoop() {
@@ -933,7 +1010,7 @@ function gameLoop() {
 
     moveEnemies();
 
-    checkCoin();
+    checkCoins();
 
     checkEnemies();
 
@@ -951,10 +1028,6 @@ function gameLoop() {
 
 player.style.display =
     "none";
-
-
-coin.style.display =
-    "block";
 
 
 gameLoop();
