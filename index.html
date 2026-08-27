@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>🪙 Coin Dodge</title>
+<title>Coin Dodge</title>
 
 <style>
 
@@ -17,15 +17,15 @@ body {
 }
 
 h1 {
-    margin: 20px 0 10px;
+    margin: 20px;
 }
 
 #info {
-    font-size: 20px;
-    margin-bottom: 5px;
+    font-size: 22px;
+    margin: 10px;
 }
 
-#cooldown {
+#shield {
     height: 25px;
     font-size: 18px;
 }
@@ -54,10 +54,10 @@ h1 {
 
     position: absolute;
 
-    left: 50%;
-    top: 50%;
+    left: 335px;
+    top: 210px;
 
-    transform: translate(-50%, -50%);
+    border-radius: 5px;
 }
 
 #coin {
@@ -78,6 +78,8 @@ h1 {
     background: red;
 
     position: absolute;
+
+    border-radius: 5px;
 }
 
 button {
@@ -114,13 +116,13 @@ button {
 
     transform: translate(-50%, -50%);
 
-    background: rgba(0,0,0,0.9);
+    background: rgba(0,0,0,0.95);
 
     padding: 30px;
 
     border-radius: 15px;
 
-    z-index: 10;
+    z-index: 20;
 }
 
 </style>
@@ -131,17 +133,17 @@ button {
 <h1>🪙 Coin Dodge</h1>
 
 <div id="info">
-    Punkte: 0 | Leben: ❤️❤️❤️
+Punkte: 0 | Leben: ❤️❤️❤️
 </div>
 
-<div id="cooldown"></div>
+<div id="shield"></div>
 
 <button id="start" onclick="startGame()">
-    ▶️ Start
+▶️ Start
 </button>
 
 <button id="home" onclick="location.href='../'">
-    🏠 Startseite
+🏠 Startseite
 </button>
 
 <div id="game">
@@ -157,14 +159,19 @@ button {
         <p id="finalScore"></p>
 
         <button onclick="startGame()">
-            🔄 Nochmal spielen
+            🔄 Nochmal
         </button>
 
     </div>
 
 </div>
 
+
 <script>
+
+/* =========================
+   SPIEL-VARIABLEN
+========================= */
 
 const game =
     document.getElementById("game");
@@ -178,10 +185,10 @@ const coin =
 const info =
     document.getElementById("info");
 
-const cooldownText =
-    document.getElementById("cooldown");
+const shield =
+    document.getElementById("shield");
 
-const gameOverScreen =
+const gameOver =
     document.getElementById("gameOver");
 
 const finalScore =
@@ -189,6 +196,7 @@ const finalScore =
 
 
 let playerX = 335;
+
 let playerY = 210;
 
 let score = 0;
@@ -197,41 +205,63 @@ let lives = 3;
 
 let gameRunning = false;
 
+
+/*
+   DAS IST DER COOLDOWN
+   false = verwundbar
+   true = unverwundbar
+*/
+
 let invincible = false;
+
 
 let keys = {};
 
 let enemies = [];
 
-let blinkInterval;
+let cooldownTimer = null;
+
+let blinkTimer = null;
 
 
-/* Tastatur */
+/* =========================
+   TASTATUR
+========================= */
 
-document.addEventListener("keydown", function(event) {
+document.addEventListener(
+    "keydown",
+    function(event) {
 
-    keys[event.key.toLowerCase()] = true;
+        keys[event.key.toLowerCase()] = true;
 
-});
-
-
-document.addEventListener("keyup", function(event) {
-
-    keys[event.key.toLowerCase()] = false;
-
-});
+    }
+);
 
 
-/* Zufällige Position */
+document.addEventListener(
+    "keyup",
+    function(event) {
+
+        keys[event.key.toLowerCase()] = false;
+
+    }
+);
+
+
+/* =========================
+   ZUFÄLLIGE POSITION
+========================= */
 
 function randomPosition(size) {
 
     return {
 
-        x: Math.random() *
+        x:
+            Math.random() *
             (game.clientWidth - size),
 
-        y: Math.random() *
+        y:
+            Math.random() *
             (game.clientHeight - size)
 
     };
@@ -239,7 +269,9 @@ function randomPosition(size) {
 }
 
 
-/* Coin bewegen */
+/* =========================
+   COIN
+========================= */
 
 function moveCoin() {
 
@@ -255,20 +287,27 @@ function moveCoin() {
 }
 
 
-/* Gegner erstellen */
+/* =========================
+   GEGNER
+========================= */
 
 function createEnemies() {
 
-    enemies.forEach(enemy => {
+    enemies.forEach(function(enemy) {
 
         enemy.element.remove();
 
     });
 
+
     enemies = [];
 
 
-    for (let i = 0; i < 3; i++) {
+    for (
+        let i = 0;
+        i < 3;
+        i++
+    ) {
 
         let enemy =
             document.createElement("div");
@@ -281,6 +320,27 @@ function createEnemies() {
             randomPosition(30);
 
 
+        enemies.push({
+
+            element: enemy,
+
+            x: position.x,
+
+            y: position.y,
+
+            dx:
+                Math.random() < 0.5
+                ? 2
+                : -2,
+
+            dy:
+                Math.random() < 0.5
+                ? 2
+                : -2
+
+        });
+
+
         enemy.style.left =
             position.x + "px";
 
@@ -290,29 +350,25 @@ function createEnemies() {
 
         game.appendChild(enemy);
 
-
-        enemies.push({
-
-            element: enemy,
-
-            x: position.x,
-
-            y: position.y,
-
-            dx: Math.random() < 0.5 ? 2 : -2,
-
-            dy: Math.random() < 0.5 ? 2 : -2
-
-        });
-
     }
 
 }
 
 
-/* Spiel starten */
+/* =========================
+   SPIEL STARTEN
+========================= */
 
 function startGame() {
+
+    /*
+       Alte Timer löschen
+    */
+
+    clearTimeout(cooldownTimer);
+
+    clearInterval(blinkTimer);
+
 
     score = 0;
 
@@ -328,20 +384,19 @@ function startGame() {
     playerY = 210;
 
 
-    gameOverScreen.style.display =
-        "none";
-
-
-    cooldownText.textContent =
-        "";
-
-
     player.style.display =
         "block";
 
-
     player.style.opacity =
         "1";
+
+
+    gameOver.style.display =
+        "none";
+
+
+    shield.textContent =
+        "";
 
 
     updateInfo();
@@ -350,10 +405,19 @@ function startGame() {
 
     createEnemies();
 
+
+    player.style.left =
+        playerX + "px";
+
+    player.style.top =
+        playerY + "px";
+
 }
 
 
-/* Spieler bewegen */
+/* =========================
+   SPIELER BEWEGEN
+========================= */
 
 function movePlayer() {
 
@@ -436,7 +500,9 @@ function movePlayer() {
 }
 
 
-/* Gegner bewegen */
+/* =========================
+   GEGNER BEWEGEN
+========================= */
 
 function moveEnemies() {
 
@@ -445,7 +511,7 @@ function moveEnemies() {
     }
 
 
-    enemies.forEach(enemy => {
+    enemies.forEach(function(enemy) {
 
         enemy.x += enemy.dx;
 
@@ -485,7 +551,9 @@ function moveEnemies() {
 }
 
 
-/* Kollision prüfen */
+/* =========================
+   KOLLISION
+========================= */
 
 function collision(
     ax,
@@ -513,15 +581,21 @@ function collision(
 }
 
 
-/* Coin prüfen */
+/* =========================
+   COIN PRÜFEN
+========================= */
 
 function checkCoin() {
 
     let coinX =
-        parseFloat(coin.style.left);
+        parseFloat(
+            coin.style.left
+        );
 
     let coinY =
-        parseFloat(coin.style.top);
+        parseFloat(
+            coin.style.top
+        );
 
 
     if (
@@ -553,19 +627,31 @@ function checkCoin() {
 }
 
 
-/* Gegner prüfen */
+/* =========================
+   GEGNER PRÜFEN
+========================= */
 
 function checkEnemies() {
 
+    /*
+       SEHR WICHTIG:
+
+       Wenn invincible true ist,
+       wird die Funktion SOFORT beendet.
+    */
+
     if (invincible) {
+
         return;
+
     }
 
 
-    for (let enemy of enemies) {
+    for (
+        let enemy of enemies
+    ) {
 
-        if (
-
+        let hit =
             collision(
 
                 playerX,
@@ -578,13 +664,14 @@ function checkEnemies() {
                 30,
                 30
 
-            )
+            );
 
-        ) {
+
+        if (hit) {
 
             loseLife();
 
-            break;
+            return;
 
         }
 
@@ -593,19 +680,32 @@ function checkEnemies() {
 }
 
 
-/* Leben verlieren */
+/* =========================
+   LEBEN VERLIEREN
+========================= */
 
 function loseLife() {
 
+    /*
+       Doppelte Treffer verhindern
+    */
+
     if (invincible) {
+
         return;
+
     }
 
 
     lives--;
 
+
     updateInfo();
 
+
+    /*
+       Keine Leben mehr
+    */
 
     if (lives <= 0) {
 
@@ -617,79 +717,156 @@ function loseLife() {
 
 
     /*
-    🛡️ COOLDOWN
+       🛡️ COOLDOWN START
     */
 
     invincible = true;
 
 
-    let timeLeft = 1.0;
+    let cooldown =
+        1500;
 
 
-    cooldownText.textContent =
-        "🛡️ Unverwundbar: 1.0 s";
+    shield.textContent =
+        "🛡️ UNVERWUNDBAR";
 
 
-    /* Spieler blinken */
+    /*
+       Spieler blinken lassen
+    */
 
-    blinkInterval =
+    blinkTimer =
         setInterval(function() {
 
             if (
-                player.style.opacity === "0"
+                player.style.opacity === "1"
             ) {
 
-                player.style.opacity = "1";
+                player.style.opacity =
+                    "0.25";
 
             } else {
-
-                player.style.opacity = "0";
-
-            }
-
-        }, 100);
-
-
-    /* Countdown */
-
-    let countdown =
-        setInterval(function() {
-
-            timeLeft -= 0.1;
-
-
-            if (timeLeft <= 0) {
-
-                clearInterval(countdown);
-
-                clearInterval(blinkInterval);
-
 
                 player.style.opacity =
                     "1";
 
-
-                invincible = false;
-
-
-                cooldownText.textContent =
-                    "";
-
-            } else {
-
-                cooldownText.textContent =
-                    "🛡️ Unverwundbar: " +
-                    timeLeft.toFixed(1) +
-                    " s";
-
             }
 
         }, 100);
 
+
+    /*
+       Spieler an sichere Stelle setzen
+    */
+
+    movePlayerToSafePosition();
+
+
+    /*
+       Nach 1,5 Sekunden
+       wieder verwundbar
+    */
+
+    cooldownTimer =
+        setTimeout(function() {
+
+            invincible = false;
+
+
+            clearInterval(
+                blinkTimer
+            );
+
+
+            player.style.opacity =
+                "1";
+
+
+            shield.textContent =
+                "";
+
+        }, cooldown);
+
 }
 
 
-/* Anzeige */
+/* =========================
+   SICHERE POSITION
+========================= */
+
+function movePlayerToSafePosition() {
+
+    let position;
+
+    let safe = false;
+
+
+    while (!safe) {
+
+        position =
+            randomPosition(30);
+
+
+        safe = true;
+
+
+        /*
+           Prüfen, ob dort
+           ein Gegner ist
+        */
+
+        for (
+            let enemy of enemies
+        ) {
+
+            if (
+
+                collision(
+
+                    position.x,
+                    position.y,
+                    30,
+                    30,
+
+                    enemy.x,
+                    enemy.y,
+                    30,
+                    30
+
+                )
+
+            ) {
+
+                safe = false;
+
+                break;
+
+            }
+
+        }
+
+    }
+
+
+    playerX =
+        position.x;
+
+    playerY =
+        position.y;
+
+
+    player.style.left =
+        playerX + "px";
+
+    player.style.top =
+        playerY + "px";
+
+}
+
+
+/* =========================
+   ANZEIGE
+========================= */
 
 function updateInfo() {
 
@@ -702,7 +879,9 @@ function updateInfo() {
 }
 
 
-/* Game Over */
+/* =========================
+   GAME OVER
+========================= */
 
 function endGame() {
 
@@ -711,7 +890,13 @@ function endGame() {
     invincible = false;
 
 
-    clearInterval(blinkInterval);
+    clearTimeout(
+        cooldownTimer
+    );
+
+    clearInterval(
+        blinkTimer
+    );
 
 
     player.style.opacity =
@@ -722,7 +907,7 @@ function endGame() {
         "none";
 
 
-    cooldownText.textContent =
+    shield.textContent =
         "";
 
 
@@ -732,13 +917,15 @@ function endGame() {
         " Punkte erreicht!";
 
 
-    gameOverScreen.style.display =
+    gameOver.style.display =
         "block";
 
 }
 
 
-/* Hauptschleife */
+/* =========================
+   SPIELSCHLEIFE
+========================= */
 
 function gameLoop() {
 
@@ -758,16 +945,17 @@ function gameLoop() {
 }
 
 
-/* Startzustand */
+/* =========================
+   STARTZUSTAND
+========================= */
 
 player.style.display =
     "none";
 
+
 coin.style.display =
     "block";
 
-
-/* Spielschleife starten */
 
 gameLoop();
 
